@@ -42,11 +42,16 @@ const bedroomsSection = checklistSectionsById['bedrooms']
 const livingCommunalAreasSection =
   checklistSectionsById['living-and-communal-areas']
 const utilitiesServicesSection = checklistSectionsById['utilities-and-services']
+const generalInformationSectionId = 'general-information'
 const collapsibleSectionIds = [
+  generalInformationSectionId,
   ...checklistSections.map((section) => section.id),
   'additional-notes',
 ]
-const photoEnabledSectionIds = collapsibleSectionIds
+const photoEnabledSectionIds = [
+  ...checklistSections.map((section) => section.id),
+  'additional-notes',
+]
 const createPhotoAttachmentId = () =>
   typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
     ? crypto.randomUUID()
@@ -54,7 +59,7 @@ const createPhotoAttachmentId = () =>
 
 const createExpandedSectionsState = () =>
   collapsibleSectionIds.reduce<Record<string, boolean>>((state, sectionId) => {
-    state[sectionId] = true
+    state[sectionId] = false
     return state
   }, {})
 
@@ -442,6 +447,8 @@ function PropertyChecklistPage() {
       >
         <GeneralInformationSection
           general={general}
+          isCollapsed={!expandedSections[generalInformationSectionId]}
+          onToggleCollapse={() => toggleSection(generalInformationSectionId)}
           onUpdateGeneral={updateGeneral}
         />
 
