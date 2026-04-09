@@ -16,16 +16,20 @@ import {
 } from './styles'
 
 type SignOffSectionProps = {
+  activeReportAction: 'download' | 'email' | null
   onDownloadReport: () => void
   onEmailReport: () => void
   onUpdateSignOff: UpdateSignOffField
+  reportActionMessage: string
   signOff: SignOffState
 }
 
 function SignOffSection({
+  activeReportAction,
   onDownloadReport,
   onEmailReport,
   onUpdateSignOff,
+  reportActionMessage,
   signOff,
 }: SignOffSectionProps) {
   return (
@@ -71,8 +75,10 @@ function SignOffSection({
               Inspection report actions
             </strong>
             <p className="mt-1 text-sm leading-6 text-slate-500">
-              Download a text report for your records or open a prefilled draft
-              email with the inspection summary.
+              Generate a polished PDF report with the full inspection details
+              and front photo. Email will attach the PDF on supported devices,
+              or download it first and open a draft email for manual
+              attachment.
             </p>
           </div>
 
@@ -80,19 +86,31 @@ function SignOffSection({
             <button
               type="button"
               className={buttonPrimaryClasses}
+              disabled={activeReportAction !== null}
               onClick={onDownloadReport}
             >
-              Download Inspection Report
+              {activeReportAction === 'download'
+                ? 'Preparing PDF...'
+                : 'Download PDF Report'}
             </button>
             <button
               type="button"
               className={buttonSecondaryClasses}
+              disabled={activeReportAction !== null}
               onClick={onEmailReport}
             >
-              Email Inspection Report
+              {activeReportAction === 'email'
+                ? 'Preparing Email...'
+                : 'Email PDF Report'}
             </button>
           </div>
         </div>
+
+        {reportActionMessage ? (
+          <p className="text-sm leading-6 text-slate-500">
+            {reportActionMessage}
+          </p>
+        ) : null}
       </div>
 
       

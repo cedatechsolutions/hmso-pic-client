@@ -76,7 +76,7 @@ export const actionButtonsClasses =
   'grid gap-3 sm:grid-cols-2 lg:grid-cols-[repeat(2,minmax(180px,max-content))]'
 
 export const buttonBaseClasses =
-  'inline-flex min-h-11 w-full items-center justify-center rounded-md border px-4 text-sm font-medium transition hover:-translate-y-px hover:shadow-[0_12px_24px_rgba(15,23,42,0.06)] lg:w-auto'
+  'inline-flex min-h-11 w-full items-center justify-center rounded-md border px-4 text-sm font-medium transition hover:-translate-y-px hover:shadow-[0_12px_24px_rgba(15,23,42,0.06)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-none lg:w-auto'
 
 export const buttonPrimaryClasses = `${buttonBaseClasses} border-[#1a73e8] bg-[#1a73e8] text-white`
 

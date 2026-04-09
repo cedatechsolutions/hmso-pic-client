@@ -25,9 +25,7 @@ import type {
 } from '../types/propertyChecklist'
 import {
   buildObservationLines,
-  buildReport,
   getSectionCompletion,
-  makeFileName,
   titleCase,
 } from '../utils/propertyChecklist'
 
@@ -77,6 +75,10 @@ function PropertyChecklistPage() {
     fileName: '',
     previewUrl: '',
   })
+  const [activeReportAction, setActiveReportAction] = useState<
+    'download' | 'email' | null
+  >(null)
+  const [reportActionMessage, setReportActionMessage] = useState('')
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(
     () => createExpandedSectionsState(),
   )
@@ -176,35 +178,38 @@ function PropertyChecklistPage() {
     }))
   }
 
-  const handleDownloadReport = () => {
-    const report = buildReport({
-      additionalNotes,
-      checklist,
-      frontPhoto,
-      general,
-      signOff,
-    })
-    const blob = new Blob([report], {
-      type: 'text/plain;charset=utf-8',
-    })
+  const buildReportContext = () => ({
+    additionalNotes,
+    checklist,
+    frontPhoto,
+    general,
+    signOff,
+  })
+
+  const triggerFileDownload = (blob: Blob, fileName: string) => {
     const objectUrl = URL.createObjectURL(blob)
     const downloadLink = document.createElement('a')
-    const safeAddress = makeFileName(general.propertyAddress) || 'property'
 
     downloadLink.href = objectUrl
-    downloadLink.download = `${safeAddress}-inspection-report.txt`
+    downloadLink.download = fileName
+    document.body.appendChild(downloadLink)
     downloadLink.click()
+    downloadLink.remove()
 
-    URL.revokeObjectURL(objectUrl)
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0)
   }
 
-  const handleEmailReport = () => {
+  const buildEmailDraftUrl = (pdfFileName: string) => {
     const observationLines = buildObservationLines({
       additionalNotes,
       checklist,
     })
     const emailBody = [
       'Property Inspection Report',
+      '',
+      'A PDF inspection report has been prepared for this property.',
+      `PDF file: ${pdfFileName}`,
+      'If your browser did not attach the PDF automatically, please attach the downloaded file manually before sending.',
       '',
       `Address: ${general.propertyAddress || 'Not provided'}`,
       `Inspection Date: ${general.inspectionDate || 'Not provided'}`,
@@ -222,9 +227,101 @@ function PropertyChecklistPage() {
       `Sign-off Date: ${signOff.signOffDate || 'Not provided'}`,
     ].join('\n')
 
-    window.location.href = `mailto:?subject=${encodeURIComponent(
+    return `mailto:?subject=${encodeURIComponent(
       `Inspection Report - ${general.propertyAddress || 'Property'}`,
     )}&body=${encodeURIComponent(emailBody)}`
+  }
+
+  const sharePdfReport = async (file: File) => {
+    if (typeof navigator === 'undefined' || typeof navigator.share !== 'function') {
+      return 'unsupported' as const
+    }
+
+    if (typeof navigator.canShare === 'function') {
+      try {
+        if (!navigator.canShare({ files: [file] })) {
+          return 'unsupported' as const
+        }
+      } catch {
+        return 'unsupported' as const
+      }
+    }
+
+    try {
+      await navigator.share({
+        files: [file],
+        text: `PDF inspection report for ${general.propertyAddress || 'the property'}.`,
+        title: `Inspection Report - ${general.propertyAddress || 'Property'}`,
+      })
+
+      return 'shared' as const
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        return 'cancelled' as const
+      }
+
+      return 'unsupported' as const
+    }
+  }
+
+  const handleDownloadReport = async () => {
+    setActiveReportAction('download')
+    setReportActionMessage('')
+
+    try {
+      const { createInspectionReportPdf } = await import(
+        '../utils/propertyChecklistPdf'
+      )
+      const { blob, fileName } = await createInspectionReportPdf(buildReportContext())
+
+      triggerFileDownload(blob, fileName)
+      setReportActionMessage(`PDF downloaded as ${fileName}.`)
+    } catch {
+      setReportActionMessage(
+        'Unable to generate the PDF report. Please try again.',
+      )
+    } finally {
+      setActiveReportAction(null)
+    }
+  }
+
+  const handleEmailReport = async () => {
+    setActiveReportAction('email')
+    setReportActionMessage('')
+
+    try {
+      const { createInspectionReportPdf } = await import(
+        '../utils/propertyChecklistPdf'
+      )
+      const { blob, file, fileName } = await createInspectionReportPdf(
+        buildReportContext(),
+      )
+      const shareResult = await sharePdfReport(file)
+
+      if (shareResult === 'shared') {
+        setReportActionMessage(
+          'PDF ready to send. Choose your email app from the share sheet.',
+        )
+        return
+      }
+
+      if (shareResult === 'cancelled') {
+        setReportActionMessage('Email share cancelled.')
+        return
+      }
+
+      triggerFileDownload(blob, fileName)
+      window.location.href = buildEmailDraftUrl(fileName)
+      setReportActionMessage(
+        'PDF downloaded and email draft opened. Attach the PDF manually if it was not added automatically.',
+      )
+    } catch {
+      setReportActionMessage(
+        'Unable to prepare the PDF email package. Please try again.',
+      )
+    } finally {
+      setActiveReportAction(null)
+    }
   }
 
   return (
@@ -355,9 +452,11 @@ function PropertyChecklistPage() {
         />
 
         <SignOffSection
+          activeReportAction={activeReportAction}
           onDownloadReport={handleDownloadReport}
           onEmailReport={handleEmailReport}
           onUpdateSignOff={updateSignOff}
+          reportActionMessage={reportActionMessage}
           signOff={signOff}
         />
       </form>
