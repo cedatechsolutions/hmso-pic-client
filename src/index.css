@@ -1,0 +1,184 @@
+@import url('https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700;1,17..18,400..700&display=swap');
+@import "tailwindcss";
+@import "react-day-picker/style.css";
+
+@theme {
+  --font-sans: "Google Sans", sans-serif;
+}
+
+@layer base {
+  :root {
+    font-family: var(--font-sans);
+    line-height: 1.5;
+    font-weight: 400;
+    color: #1f2937;
+    background: #f5f7fb;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply m-0 min-w-80 bg-[#f5f7fb] font-sans text-slate-800;
+  }
+
+  #root {
+    @apply min-h-screen;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply m-0 leading-tight text-slate-800;
+  }
+
+  p {
+    @apply m-0;
+  }
+
+  a {
+    @apply text-inherit;
+  }
+
+  input,
+  textarea {
+    @apply w-full rounded-md border border-[#dde3ea] bg-white px-3.5 py-3 text-[0.98rem] text-slate-800 transition;
+    transition-property: border-color, box-shadow, background-color;
+  }
+
+  textarea {
+    @apply min-h-[120px] resize-y;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: #8a94a3;
+  }
+
+  input:hover,
+  textarea:hover {
+    border-color: #c7d0db;
+  }
+
+  input:focus,
+  textarea:focus,
+  button:focus-visible {
+    outline: none;
+    border-color: rgba(26, 115, 232, 0.6);
+    box-shadow: 0 0 0 4px rgba(26, 115, 232, 0.14);
+  }
+
+  input[type='checkbox'],
+  input[type='radio'] {
+    @apply h-[18px] w-[18px] shrink-0;
+    margin: 2px 0 0;
+    accent-color: #1a73e8;
+    box-shadow: none;
+  }
+
+  button {
+    appearance: none;
+  }
+
+  .rdp-root {
+    --rdp-accent-color: #1a73e8;
+    --rdp-accent-background-color: #eef4ff;
+    --rdp-day-height: 40px;
+    --rdp-day-width: 40px;
+    --rdp-day_button-height: 38px;
+    --rdp-day_button-width: 38px;
+    --rdp-day_button-border-radius: 0.375rem;
+    --rdp-day_button-border: 1px solid transparent;
+    --rdp-selected-border: 1px solid var(--rdp-accent-color);
+    --rdp-nav_button-height: 2rem;
+    --rdp-nav_button-width: 2rem;
+    --rdp-nav-height: 2rem;
+    --rdp-months-gap: 0;
+    --rdp-animation_duration: 0.15s;
+    font-family: var(--font-sans);
+  }
+
+  .rdp-months,
+  .rdp-month,
+  .rdp-month_grid {
+    width: 100%;
+  }
+
+  .rdp-month_caption {
+    margin-bottom: 0.5rem;
+    font-size: inherit;
+    font-weight: 500;
+  }
+
+  .rdp-caption_label {
+    font-size: 0.95rem;
+    color: #1f2937;
+  }
+
+  .rdp-button_previous,
+  .rdp-button_next {
+    border: 1px solid #dde3ea;
+    border-radius: 0.375rem;
+    background: #fff;
+    color: #475569;
+  }
+
+  .rdp-button_previous:hover,
+  .rdp-button_next:hover {
+    background: #f8fafd;
+  }
+
+  .rdp-chevron {
+    fill: currentColor;
+  }
+
+  .rdp-weekday {
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: #64748b;
+  }
+
+  .rdp-day_button {
+    font-size: 0.9rem;
+    color: #1f2937;
+  }
+
+  .rdp-day_button:hover:not([disabled]) {
+    background: #eef4ff;
+  }
+
+  .rdp-selected {
+    font-size: inherit;
+    font-weight: 600;
+  }
+
+  .rdp-selected .rdp-day_button {
+    background: #1a73e8;
+    color: #fff;
+    border-color: #1a73e8;
+  }
+
+  .rdp-today:not(.rdp-outside) .rdp-day_button {
+    border-color: #1a73e8;
+    color: #1a73e8;
+  }
+
+  .rdp-selected.rdp-today .rdp-day_button {
+    color: #fff;
+  }
+
+  .rdp-outside .rdp-day_button {
+    color: #94a3b8;
+  }
+}
