@@ -1,11 +1,14 @@
-import type { ReactNode } from 'react'
+import type { ChangeEventHandler, ReactNode } from 'react'
 import type {
   ChecklistSectionData,
   ChecklistState,
+  PhotoAttachment,
   UpdateChecklistItem,
 } from '../../types/propertyChecklist'
 import { getSectionCompletion } from '../../utils/propertyChecklist'
+import SectionPhotoEvidence from './SectionPhotoEvidence'
 import {
+  sectionCollapseButtonClasses,
   checklistGridClasses,
   checklistItemBaseClasses,
   checklistItemCheckedClasses,
@@ -15,6 +18,7 @@ import {
   mutedFieldLabelClasses,
   sectionCountClasses,
   sectionDescriptionClasses,
+  sectionHeaderControlsClasses,
   sectionHeadingClasses,
   sectionKickerClasses,
   sectionShellClasses,
@@ -26,7 +30,12 @@ type ChecklistSectionCardProps = {
   children?: ReactNode
   isCollapsed?: boolean
   onUpdateChecklistItem: UpdateChecklistItem
+  onPhotoChange?: ChangeEventHandler<HTMLInputElement>
+  onRemovePhoto?: (attachmentId: string) => void
   onToggleCollapse?: () => void
+  photoAttachments?: PhotoAttachment[]
+  photoDescription?: string
+  photoTitle?: string
   section: ChecklistSectionData
 }
 
@@ -35,52 +44,30 @@ function ChecklistSectionCard({
   children,
   isCollapsed = false,
   onUpdateChecklistItem,
+  onPhotoChange,
+  onRemovePhoto,
   onToggleCollapse,
+  photoAttachments = [],
+  photoDescription,
+  photoTitle,
   section,
 }: ChecklistSectionCardProps) {
   const contentId = `${section.id}-content`
+  const photoInputId = `${section.id}-photos`
 
   return (
     <section className={sectionShellClasses} id={section.id}>
       <div className={sectionHeadingClasses}>
         {onToggleCollapse ? (
-          <button
-            type="button"
-            className="grid gap-1 text-left"
-            aria-expanded={!isCollapsed}
-            aria-controls={contentId}
-            onClick={onToggleCollapse}
-          >
+          <div className="grid gap-1 text-left">
             <span className={sectionKickerClasses}>
               Section {section.number.toString().padStart(2, '0')}
             </span>
-            <span className="flex items-start justify-between gap-3">
-              <span>
-                <span className={sectionTitleClasses}>{section.title}</span>
-                <span className={`block ${sectionDescriptionClasses}`}>
-                  {section.description}
-                </span>
-              </span>
-              <span className="mt-1 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-[#dde3ea] bg-[#f8fafd] text-slate-600">
-                <svg
-                  className={`h-4 w-4 transition-transform ${
-                    isCollapsed ? '' : 'rotate-180'
-                  }`}
-                  viewBox="0 0 20 20"
-                  fill="none"
-                  aria-hidden="true"
-                >
-                  <path
-                    d="M5 8l5 5 5-5"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </span>
+            <span className={sectionTitleClasses}>{section.title}</span>
+            <span className={`block ${sectionDescriptionClasses}`}>
+              {section.description}
             </span>
-          </button>
+          </div>
         ) : (
           <div>
             <span className={sectionKickerClasses}>
@@ -91,9 +78,39 @@ function ChecklistSectionCard({
           </div>
         )}
 
-        <span className={`${sectionCountClasses} self-start`}>
-          {getSectionCompletion(section, checklist)}/{section.items.length} checked
-        </span>
+        <div className={sectionHeaderControlsClasses}>
+          <span className={sectionCountClasses}>
+            {getSectionCompletion(section, checklist)}/{section.items.length} checked
+          </span>
+
+          {onToggleCollapse ? (
+            <button
+              type="button"
+              className={sectionCollapseButtonClasses}
+              aria-expanded={!isCollapsed}
+              aria-controls={contentId}
+              aria-label={`${isCollapsed ? 'Expand' : 'Collapse'} ${section.title}`}
+              onClick={onToggleCollapse}
+            >
+              <svg
+                className={`h-4 w-4 transition-transform ${
+                  isCollapsed ? '' : 'rotate-180'
+                }`}
+                viewBox="0 0 20 20"
+                fill="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M5 8l5 5 5-5"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+          ) : null}
+        </div>
       </div>
 
       {!isCollapsed ? (
@@ -138,6 +155,17 @@ function ChecklistSectionCard({
           </div>
 
           {children}
+
+          {onPhotoChange && onRemovePhoto && photoDescription ? (
+            <SectionPhotoEvidence
+              attachments={photoAttachments}
+              description={photoDescription}
+              inputId={photoInputId}
+              onPhotoChange={onPhotoChange}
+              onRemovePhoto={onRemovePhoto}
+              title={photoTitle}
+            />
+          ) : null}
         </div>
       ) : null}
     </section>

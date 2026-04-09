@@ -3,8 +3,9 @@ import { checklistSections } from '../data/propertyChecklist'
 import type {
   AdditionalNotesState,
   ChecklistState,
-  FrontPhotoState,
   GeneralFormState,
+  PhotoAttachment,
+  SectionPhotosState,
   SignOffState,
 } from '../types/propertyChecklist'
 import { getSectionCompletion, makeFileName, titleCase } from './propertyChecklist'
@@ -12,8 +13,8 @@ import { getSectionCompletion, makeFileName, titleCase } from './propertyCheckli
 type ReportContext = {
   additionalNotes: AdditionalNotesState
   checklist: ChecklistState
-  frontPhoto: FrontPhotoState
   general: GeneralFormState
+  sectionPhotos: SectionPhotosState
   signOff: SignOffState
 }
 
@@ -27,6 +28,7 @@ type FontWeight = 'normal' | 'bold'
 type RgbColor = [number, number, number]
 type LoadedImage = {
   dataUrl: string
+  fileName: string
   height: number
   width: number
 }
@@ -67,8 +69,10 @@ const toTextLines = (
   return Array.isArray(result) ? result : [result]
 }
 
-const loadImageForPdf = async (previewUrl: string): Promise<LoadedImage | null> => {
-  if (!previewUrl) {
+const loadImageForPdf = async (
+  attachment: PhotoAttachment,
+): Promise<LoadedImage | null> => {
+  if (!attachment.previewUrl) {
     return null
   }
 
@@ -95,13 +99,14 @@ const loadImageForPdf = async (previewUrl: string): Promise<LoadedImage | null> 
 
       resolve({
         dataUrl: canvas.toDataURL('image/jpeg', 0.9),
+        fileName: attachment.fileName,
         height,
         width,
       })
     }
 
     image.onerror = () => resolve(null)
-    image.src = previewUrl
+    image.src = attachment.previewUrl
   })
 }
 
@@ -117,8 +122,8 @@ const formatGeneratedAt = () =>
 export const createInspectionReportPdf = async ({
   additionalNotes,
   checklist,
-  frontPhoto,
   general,
+  sectionPhotos,
   signOff,
 }: ReportContext): Promise<GeneratedInspectionReport> => {
   const doc = new jsPDF({
@@ -139,7 +144,17 @@ export const createInspectionReportPdf = async ({
   )
   const safeAddress = makeFileName(general.propertyAddress) || 'property'
   const fileName = `${safeAddress}-inspection-report.pdf`
-  const photo = await loadImageForPdf(frontPhoto.previewUrl)
+  const loadedSectionPhotos = Object.fromEntries(
+    await Promise.all(
+      Object.entries(sectionPhotos).map(async ([sectionId, attachments]) => {
+        const loadedPhotos = (
+          await Promise.all(attachments.map((attachment) => loadImageForPdf(attachment)))
+        ).filter((image): image is LoadedImage => Boolean(image))
+
+        return [sectionId, loadedPhotos]
+      }),
+    ),
+  ) as Record<string, LoadedImage[]>
   const generatedAt = formatGeneratedAt()
 
   let y = 10
@@ -500,7 +515,13 @@ export const createInspectionReportPdf = async ({
     y += blockHeight
   }
 
-  const renderPhotoEvidence = () => {
+  const renderPhotoEvidence = (sectionId: string) => {
+    const photos = loadedSectionPhotos[sectionId] ?? []
+
+    if (!photos.length) {
+      return
+    }
+
     ensureSpace(12)
 
     writeText({
@@ -513,45 +534,60 @@ export const createInspectionReportPdf = async ({
     })
     y += 4.5
 
-    if (!photo) {
-      writeText({
-        color: palette.ink,
-        fontSize: 10,
-        lines: ['No front image attached for this inspection.'],
-        x: PAGE_MARGIN,
-        yPosition: y,
+    const columnGap = 6
+    const columnWidth = (contentWidth - columnGap) / 2
+    const maxImageHeight = 58
+
+    for (let index = 0; index < photos.length; index += 2) {
+      const rowPhotos = photos.slice(index, index + 2).map((photo) => {
+        const photoRatio = photo.width / photo.height
+        let renderWidth = columnWidth
+        let renderHeight = renderWidth / photoRatio
+
+        if (renderHeight > maxImageHeight) {
+          renderHeight = maxImageHeight
+          renderWidth = renderHeight * photoRatio
+        }
+
+        const captionLines = toTextLines(doc, photo.fileName, columnWidth, 7.5)
+        const captionHeight = textBlockHeight(captionLines, 7.5, 1.25)
+
+        return {
+          ...photo,
+          captionHeight,
+          captionLines,
+          renderHeight,
+          renderWidth,
+          rowHeight: renderHeight + captionHeight + 6,
+        }
       })
-      y += 7
-      return
-    }
+      const rowHeight = Math.max(...rowPhotos.map((photo) => photo.rowHeight))
 
-    const maxWidth = contentWidth
-    const maxHeight = 92
-    const photoRatio = photo.width / photo.height
-    let renderWidth = maxWidth
-    let renderHeight = renderWidth / photoRatio
+      ensureSpace(rowHeight)
 
-    if (renderHeight > maxHeight) {
-      renderHeight = maxHeight
-      renderWidth = renderHeight * photoRatio
-    }
+      rowPhotos.forEach((photo, columnIndex) => {
+        const x = PAGE_MARGIN + columnIndex * (columnWidth + columnGap)
+        const imageX = x + (columnWidth - photo.renderWidth) / 2
 
-    ensureSpace(renderHeight + 12)
-
-    const imageX = PAGE_MARGIN + (contentWidth - renderWidth) / 2
-
-    doc.addImage(photo.dataUrl, 'JPEG', imageX, y, renderWidth, renderHeight)
-    y += renderHeight + 4
-
-    if (frontPhoto.fileName.trim()) {
-      writeText({
-        color: palette.muted,
-        fontSize: 8,
-        lines: [frontPhoto.fileName],
-        x: PAGE_MARGIN,
-        yPosition: y,
+        doc.addImage(
+          photo.dataUrl,
+          'JPEG',
+          imageX,
+          y,
+          photo.renderWidth,
+          photo.renderHeight,
+        )
+        writeText({
+          color: palette.muted,
+          fontSize: 7.5,
+          lines: photo.captionLines,
+          lineHeightFactor: 1.25,
+          x,
+          yPosition: y + photo.renderHeight + 3.5,
+        })
       })
-      y += 5
+
+      y += rowHeight + 2
     }
   }
 
@@ -624,9 +660,7 @@ export const createInspectionReportPdf = async ({
       })
     })
 
-    if (section.id === 'exterior-access') {
-      renderPhotoEvidence()
-    }
+    renderPhotoEvidence(section.id)
   })
 
   renderSectionHeading({
@@ -653,6 +687,7 @@ export const createInspectionReportPdf = async ({
     additionalNotes.inspectorComments,
     'No additional inspector comments recorded.',
   )
+  renderPhotoEvidence('additional-notes')
 
   renderSectionHeading({
     number: 'Section 11',

@@ -10,6 +10,7 @@ import {
   fullWidthFieldClasses,
   radioGroupClasses,
   radioOptionClasses,
+  radioOptionCheckedClasses,
   sectionHeadingClasses,
   sectionKickerClasses,
   sectionShellClasses,
@@ -80,7 +81,13 @@ function GeneralInformationSection({
             Occupied or Vacant <span className="text-red-600">*</span>
           </legend>
           <div className={radioGroupClasses}>
-            <label className={radioOptionClasses}>
+            <label
+              className={`${radioOptionClasses} ${
+                general.occupancy === 'occupied'
+                  ? radioOptionCheckedClasses
+                  : ''
+              }`}
+            >
               <input
                 type="radio"
                 name="occupancy"
@@ -90,7 +97,13 @@ function GeneralInformationSection({
               <span>Occupied</span>
             </label>
 
-            <label className={radioOptionClasses}>
+            <label
+              className={`${radioOptionClasses} ${
+                general.occupancy === 'vacant'
+                  ? radioOptionCheckedClasses
+                  : ''
+              }`}
+            >
               <input
                 type="radio"
                 name="occupancy"

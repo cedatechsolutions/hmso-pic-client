@@ -1,4 +1,5 @@
-import { type ChangeEvent, useEffect, useState } from 'react'
+import { type ChangeEvent, useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import AdditionalNotesSection from '../components/property-checklist/AdditionalNotesSection'
 import BathroomsSection from '../components/property-checklist/BathroomsSection'
 import BedroomsSection from '../components/property-checklist/BedroomsSection'
@@ -19,8 +20,9 @@ import {
 import type {
   AdditionalNotesState,
   ChecklistState,
-  FrontPhotoState,
   GeneralFormState,
+  PhotoAttachment,
+  SectionPhotosState,
   SignOffState,
 } from '../types/propertyChecklist'
 import {
@@ -28,6 +30,7 @@ import {
   getSectionCompletion,
   titleCase,
 } from '../utils/propertyChecklist'
+import { appRoutes } from '../routes'
 
 const exteriorAccessSection = checklistSectionsById['exterior-access']
 const healthAndSafetySection = checklistSectionsById['health-and-safety']
@@ -43,10 +46,21 @@ const collapsibleSectionIds = [
   ...checklistSections.map((section) => section.id),
   'additional-notes',
 ]
+const photoEnabledSectionIds = collapsibleSectionIds
+const createPhotoAttachmentId = () =>
+  typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(16).slice(2)}`
 
 const createExpandedSectionsState = () =>
   collapsibleSectionIds.reduce<Record<string, boolean>>((state, sectionId) => {
     state[sectionId] = true
+    return state
+  }, {})
+
+const createSectionPhotosState = () =>
+  photoEnabledSectionIds.reduce<SectionPhotosState>((state, sectionId) => {
+    state[sectionId] = []
     return state
   }, {})
 
@@ -71,10 +85,9 @@ function PropertyChecklistPage() {
     inspectorSignature: '',
     signOffDate: '',
   })
-  const [frontPhoto, setFrontPhoto] = useState<FrontPhotoState>({
-    fileName: '',
-    previewUrl: '',
-  })
+  const [sectionPhotos, setSectionPhotos] = useState<SectionPhotosState>(() =>
+    createSectionPhotosState(),
+  )
   const [activeReportAction, setActiveReportAction] = useState<
     'download' | 'email' | null
   >(null)
@@ -83,13 +96,19 @@ function PropertyChecklistPage() {
     () => createExpandedSectionsState(),
   )
 
+  const sectionPhotosRef = useRef(sectionPhotos)
+
+  useEffect(() => {
+    sectionPhotosRef.current = sectionPhotos
+  }, [sectionPhotos])
+
   useEffect(() => {
     return () => {
-      if (frontPhoto.previewUrl) {
-        URL.revokeObjectURL(frontPhoto.previewUrl)
-      }
+      Object.values(sectionPhotosRef.current)
+        .flat()
+        .forEach((attachment) => URL.revokeObjectURL(attachment.previewUrl))
     }
-  }, [frontPhoto.previewUrl])
+  }, [])
 
   const totalChecklistItems = checklistSections.reduce(
     (count, section) => count + section.items.length,
@@ -150,23 +169,43 @@ function PropertyChecklistPage() {
     }))
   }
 
-  const handleFrontPhotoChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
+  const handleSectionPhotosChange =
+    (sectionId: string) => (event: ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(event.target.files ?? [])
 
-    if (!file) {
-      return
+      if (!files.length) {
+        return
+      }
+
+      const attachments: PhotoAttachment[] = files.map((file) => ({
+        fileName: file.name,
+        id: createPhotoAttachmentId(),
+        previewUrl: URL.createObjectURL(file),
+      }))
+
+      setSectionPhotos((current) => ({
+        ...current,
+        [sectionId]: [...(current[sectionId] ?? []), ...attachments],
+      }))
+
+      event.target.value = ''
     }
 
-    const previewUrl = URL.createObjectURL(file)
+  const removeSectionPhoto = (sectionId: string, attachmentId: string) => {
+    setSectionPhotos((current) => {
+      const targetAttachment = current[sectionId]?.find(
+        (attachment) => attachment.id === attachmentId,
+      )
 
-    setFrontPhoto((current) => {
-      if (current.previewUrl) {
-        URL.revokeObjectURL(current.previewUrl)
+      if (targetAttachment) {
+        URL.revokeObjectURL(targetAttachment.previewUrl)
       }
 
       return {
-        fileName: file.name,
-        previewUrl,
+        ...current,
+        [sectionId]: (current[sectionId] ?? []).filter(
+          (attachment) => attachment.id !== attachmentId,
+        ),
       }
     })
   }
@@ -181,8 +220,8 @@ function PropertyChecklistPage() {
   const buildReportContext = () => ({
     additionalNotes,
     checklist,
-    frontPhoto,
     general,
+    sectionPhotos,
     signOff,
   })
 
@@ -204,6 +243,10 @@ function PropertyChecklistPage() {
       additionalNotes,
       checklist,
     })
+    const totalImagesAttached = Object.values(sectionPhotos).reduce(
+      (count, attachments) => count + attachments.length,
+      0,
+    )
     const emailBody = [
       'Property Inspection Report',
       '',
@@ -216,7 +259,7 @@ function PropertyChecklistPage() {
       `Inspector: ${general.inspectorName || 'Not provided'}`,
       `Occupancy: ${titleCase(general.occupancy)}`,
       `Checklist Completion: ${checkedChecklistItems}/${totalChecklistItems}`,
-      `Front Photo Attached: ${frontPhoto.fileName || 'No'}`,
+      `Photo Evidence Included: ${totalImagesAttached} image(s)`,
       '',
       'Observations:',
       observationLines.length
@@ -326,12 +369,38 @@ function PropertyChecklistPage() {
 
   return (
     <main className="mx-auto w-[min(1220px,calc(100%_-_20px))] pb-8 sm:w-[min(1220px,calc(100%_-_32px))]">
-      <header className="sticky top-0 z-30 bg-[#f5f7fb]/95 py-3 backdrop-blur-sm">
+      <div className="pt-5">
+        <Link
+          to={appRoutes.home}
+          className="inline-flex items-center gap-2 text-sm font-medium text-[#1a73e8] transition hover:text-[#174ea6]"
+        >
+          <svg
+            className="h-4 w-4"
+            viewBox="0 0 20 20"
+            fill="none"
+            aria-hidden="true"
+          >
+            <path
+              d="M11.5 4.5L6 10l5.5 5.5"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M6.5 10h8"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+            />
+          </svg>
+          <span>Back to home</span>
+        </Link>
+      </div>
+
+      <header className="sticky top-0 z-30 py-3 bg-[#f5f7fb]/95  backdrop-blur-sm">
         <div className={surfaceCardClasses}>
           <div className="grid gap-3">
-            {/* <span className="inline-flex items-center text-[0.72rem] font-semibold uppercase tracking-[0.12em] text-[#1a73e8]">
-              Property care workflow
-            </span> */}
             <h1 className="text-[1.35rem] font-medium tracking-[-0.03em] text-slate-800 sm:text-[1.55rem]">
               Property Inspection Checklist
             </h1>
@@ -378,28 +447,45 @@ function PropertyChecklistPage() {
 
         <ExteriorAccessSection
           checklist={checklist}
-          frontPhoto={frontPhoto}
           isCollapsed={!expandedSections[exteriorAccessSection.id]}
-          onFrontPhotoChange={handleFrontPhotoChange}
+          onPhotoChange={handleSectionPhotosChange(exteriorAccessSection.id)}
+          onRemovePhoto={(attachmentId) =>
+            removeSectionPhoto(exteriorAccessSection.id, attachmentId)
+          }
           onUpdateChecklistItem={updateChecklistItem}
           onToggleCollapse={() => toggleSection(exteriorAccessSection.id)}
+          photoAttachments={sectionPhotos[exteriorAccessSection.id] ?? []}
           section={exteriorAccessSection}
         />
 
         <HealthAndSafetySection
           checklist={checklist}
           isCollapsed={!expandedSections[healthAndSafetySection.id]}
+          onPhotoChange={handleSectionPhotosChange(healthAndSafetySection.id)}
+          onRemovePhoto={(attachmentId) =>
+            removeSectionPhoto(healthAndSafetySection.id, attachmentId)
+          }
           onUpdateChecklistItem={updateChecklistItem}
           onToggleCollapse={() => toggleSection(healthAndSafetySection.id)}
+          photoAttachments={sectionPhotos[healthAndSafetySection.id] ?? []}
           section={healthAndSafetySection}
         />
 
         <CleanlinessDampAndMouldSection
           checklist={checklist}
           isCollapsed={!expandedSections[cleanlinessDampAndMouldSection.id]}
+          onPhotoChange={handleSectionPhotosChange(
+            cleanlinessDampAndMouldSection.id,
+          )}
+          onRemovePhoto={(attachmentId) =>
+            removeSectionPhoto(cleanlinessDampAndMouldSection.id, attachmentId)
+          }
           onUpdateChecklistItem={updateChecklistItem}
           onToggleCollapse={() =>
             toggleSection(cleanlinessDampAndMouldSection.id)
+          }
+          photoAttachments={
+            sectionPhotos[cleanlinessDampAndMouldSection.id] ?? []
           }
           section={cleanlinessDampAndMouldSection}
         />
@@ -407,48 +493,80 @@ function PropertyChecklistPage() {
         <KitchenAreaSection
           checklist={checklist}
           isCollapsed={!expandedSections[kitchenAreaSection.id]}
+          onPhotoChange={handleSectionPhotosChange(kitchenAreaSection.id)}
+          onRemovePhoto={(attachmentId) =>
+            removeSectionPhoto(kitchenAreaSection.id, attachmentId)
+          }
           onUpdateChecklistItem={updateChecklistItem}
           onToggleCollapse={() => toggleSection(kitchenAreaSection.id)}
+          photoAttachments={sectionPhotos[kitchenAreaSection.id] ?? []}
           section={kitchenAreaSection}
         />
 
         <BathroomsSection
           checklist={checklist}
           isCollapsed={!expandedSections[bathroomsSection.id]}
+          onPhotoChange={handleSectionPhotosChange(bathroomsSection.id)}
+          onRemovePhoto={(attachmentId) =>
+            removeSectionPhoto(bathroomsSection.id, attachmentId)
+          }
           onUpdateChecklistItem={updateChecklistItem}
           onToggleCollapse={() => toggleSection(bathroomsSection.id)}
+          photoAttachments={sectionPhotos[bathroomsSection.id] ?? []}
           section={bathroomsSection}
         />
 
         <BedroomsSection
           checklist={checklist}
           isCollapsed={!expandedSections[bedroomsSection.id]}
+          onPhotoChange={handleSectionPhotosChange(bedroomsSection.id)}
+          onRemovePhoto={(attachmentId) =>
+            removeSectionPhoto(bedroomsSection.id, attachmentId)
+          }
           onUpdateChecklistItem={updateChecklistItem}
           onToggleCollapse={() => toggleSection(bedroomsSection.id)}
+          photoAttachments={sectionPhotos[bedroomsSection.id] ?? []}
           section={bedroomsSection}
         />
 
         <LivingCommunalAreasSection
           checklist={checklist}
           isCollapsed={!expandedSections[livingCommunalAreasSection.id]}
+          onPhotoChange={handleSectionPhotosChange(
+            livingCommunalAreasSection.id,
+          )}
+          onRemovePhoto={(attachmentId) =>
+            removeSectionPhoto(livingCommunalAreasSection.id, attachmentId)
+          }
           onUpdateChecklistItem={updateChecklistItem}
           onToggleCollapse={() => toggleSection(livingCommunalAreasSection.id)}
+          photoAttachments={sectionPhotos[livingCommunalAreasSection.id] ?? []}
           section={livingCommunalAreasSection}
         />
 
         <UtilitiesServicesSection
           checklist={checklist}
           isCollapsed={!expandedSections[utilitiesServicesSection.id]}
+          onPhotoChange={handleSectionPhotosChange(utilitiesServicesSection.id)}
+          onRemovePhoto={(attachmentId) =>
+            removeSectionPhoto(utilitiesServicesSection.id, attachmentId)
+          }
           onUpdateChecklistItem={updateChecklistItem}
           onToggleCollapse={() => toggleSection(utilitiesServicesSection.id)}
+          photoAttachments={sectionPhotos[utilitiesServicesSection.id] ?? []}
           section={utilitiesServicesSection}
         />
 
         <AdditionalNotesSection
           additionalNotes={additionalNotes}
           isCollapsed={!expandedSections['additional-notes']}
+          onPhotoChange={handleSectionPhotosChange('additional-notes')}
+          onRemovePhoto={(attachmentId) =>
+            removeSectionPhoto('additional-notes', attachmentId)
+          }
           onUpdateAdditionalNotes={updateAdditionalNotes}
           onToggleCollapse={() => toggleSection('additional-notes')}
+          photoAttachments={sectionPhotos['additional-notes'] ?? []}
         />
 
         <SignOffSection

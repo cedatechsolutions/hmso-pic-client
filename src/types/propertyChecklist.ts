@@ -45,10 +45,13 @@ export type SignOffState = {
   signOffDate: string
 }
 
-export type FrontPhotoState = {
+export type PhotoAttachment = {
+  id: string
   fileName: string
   previewUrl: string
 }
+
+export type SectionPhotosState = Record<string, PhotoAttachment[]>
 
 export type UpdateChecklistItem = (
   itemId: string,
