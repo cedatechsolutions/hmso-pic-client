@@ -375,7 +375,7 @@ function PropertyChecklistPage() {
           className="inline-flex items-center gap-2 text-sm font-medium text-[#1a73e8] transition hover:text-[#174ea6]"
         >
           <svg
-            className="h-4 w-4"
+            className="h-6 w-6"
             viewBox="0 0 20 20"
             fill="none"
             aria-hidden="true"
@@ -394,7 +394,7 @@ function PropertyChecklistPage() {
               strokeLinecap="round"
             />
           </svg>
-          <span>Back to home</span>
+          <span className="text-base font-medium">Back to home</span>
         </Link>
       </div>
 
