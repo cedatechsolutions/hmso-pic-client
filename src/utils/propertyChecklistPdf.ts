@@ -8,7 +8,12 @@ import type {
   SectionPhotosState,
   SignOffState,
 } from '../types/propertyChecklist'
-import { getSectionCompletion, makeFileName, titleCase } from './propertyChecklist'
+import {
+  formatReportDate,
+  getSectionCompletion,
+  makeFileName,
+  titleCase,
+} from './propertyChecklist'
 
 type ReportContext = {
   additionalNotes: AdditionalNotesState
@@ -111,13 +116,13 @@ const loadImageForPdf = async (
 }
 
 const formatGeneratedAt = () =>
-  new Date().toLocaleString('en-GB', {
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    month: 'short',
+  new Date().toLocaleDateString('en-US', {
+    day: 'numeric',
+    month: 'long',
     year: 'numeric',
   })
+
+const formatFileDate = (value: string) => value.trim().replace(/-/g, '')
 
 export const createInspectionReportPdf = async ({
   additionalNotes,
@@ -143,7 +148,8 @@ export const createInspectionReportPdf = async ({
     0,
   )
   const safeAddress = makeFileName(general.propertyAddress) || 'property'
-  const fileName = `${safeAddress}-inspection-report.pdf`
+  const safeInspectionDate = formatFileDate(general.inspectionDate) || 'undated'
+  const fileName = `${safeAddress}-inspection-report-${safeInspectionDate}.pdf`
   const loadedSectionPhotos = Object.fromEntries(
     await Promise.all(
       Object.entries(sectionPhotos).map(async ([sectionId, attachments]) => {
@@ -605,7 +611,7 @@ export const createInspectionReportPdf = async ({
       },
       {
         label: 'Inspection date',
-        value: normaliseValue(general.inspectionDate),
+        value: formatReportDate(general.inspectionDate),
       },
       {
         label: 'Inspector',
@@ -621,15 +627,10 @@ export const createInspectionReportPdf = async ({
       },
       {
         label: 'Sign-off date',
-        value: normaliseValue(signOff.signOffDate),
+        value: formatReportDate(signOff.signOffDate),
       },
     ],
     2,
-  )
-  renderParagraphField(
-    'Overall condition',
-    general.overallCondition,
-    'No overall condition notes recorded.',
   )
 
   checklistSections.forEach((section) => {
@@ -687,6 +688,11 @@ export const createInspectionReportPdf = async ({
     additionalNotes.inspectorComments,
     'No additional inspector comments recorded.',
   )
+  renderParagraphField(
+    'Notes on overall condition',
+    general.overallCondition,
+    'No overall condition notes recorded.',
+  )
   renderPhotoEvidence('additional-notes')
 
   renderSectionHeading({
@@ -701,7 +707,7 @@ export const createInspectionReportPdf = async ({
       },
       {
         label: 'Sign-off date',
-        value: normaliseValue(signOff.signOffDate),
+        value: formatReportDate(signOff.signOffDate),
       },
     ],
     2,

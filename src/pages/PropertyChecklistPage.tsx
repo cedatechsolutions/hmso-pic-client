@@ -27,6 +27,7 @@ import type {
 } from '../types/propertyChecklist'
 import {
   buildObservationLines,
+  formatReportDate,
   getSectionCompletion,
   titleCase,
 } from '../utils/propertyChecklist'
@@ -129,6 +130,30 @@ function PropertyChecklistPage() {
     totalChecklistItems === 0
       ? 0
       : Math.round((checkedChecklistItems / totalChecklistItems) * 100)
+
+  const areRequiredGeneralFieldsComplete =
+    general.propertyAddress.trim().length > 0 &&
+    general.inspectionDate.length > 0 &&
+    general.inspectorName.trim().length > 0 &&
+    general.occupancy.length > 0
+
+  const areRequiredSignOffFieldsComplete =
+    signOff.inspectorSignature.trim().length > 0 &&
+    signOff.signOffDate.length > 0
+
+  const isChecklistComplete =
+    totalChecklistItems > 0 && checkedChecklistItems === totalChecklistItems
+
+  const canGenerateReport =
+    isChecklistComplete &&
+    areRequiredGeneralFieldsComplete &&
+    areRequiredSignOffFieldsComplete
+
+  const reportReadinessMessage = !isChecklistComplete
+    ? 'Complete all checklist items before downloading or emailing the report.'
+    : !areRequiredGeneralFieldsComplete || !areRequiredSignOffFieldsComplete
+      ? 'Fill in all required fields before downloading or emailing the report.'
+      : 'The checklist is complete and the report actions are ready.'
 
   const updateGeneral = <K extends keyof GeneralFormState>(
     field: K,
@@ -247,6 +272,7 @@ function PropertyChecklistPage() {
     const observationLines = buildObservationLines({
       additionalNotes,
       checklist,
+      general,
     })
     const totalImagesAttached = Object.values(sectionPhotos).reduce(
       (count, attachments) => count + attachments.length,
@@ -260,7 +286,7 @@ function PropertyChecklistPage() {
       'If your browser did not attach the PDF automatically, please attach the downloaded file manually before sending.',
       '',
       `Address: ${general.propertyAddress || 'Not provided'}`,
-      `Inspection Date: ${general.inspectionDate || 'Not provided'}`,
+      `Inspection Date: ${formatReportDate(general.inspectionDate)}`,
       `Inspector: ${general.inspectorName || 'Not provided'}`,
       `Occupancy: ${titleCase(general.occupancy)}`,
       `Checklist Completion: ${checkedChecklistItems}/${totalChecklistItems}`,
@@ -272,7 +298,7 @@ function PropertyChecklistPage() {
         : 'No additional observations recorded.',
       '',
       `Inspector Signature: ${signOff.inspectorSignature || 'Not provided'}`,
-      `Sign-off Date: ${signOff.signOffDate || 'Not provided'}`,
+      `Sign-off Date: ${formatReportDate(signOff.signOffDate)}`,
     ].join('\n')
 
     return `mailto:?subject=${encodeURIComponent(
@@ -313,6 +339,11 @@ function PropertyChecklistPage() {
   }
 
   const handleDownloadReport = async () => {
+    if (!canGenerateReport) {
+      setReportActionMessage(reportReadinessMessage)
+      return
+    }
+
     setActiveReportAction('download')
     setReportActionMessage('')
 
@@ -334,6 +365,11 @@ function PropertyChecklistPage() {
   }
 
   const handleEmailReport = async () => {
+    if (!canGenerateReport) {
+      setReportActionMessage(reportReadinessMessage)
+      return
+    }
+
     setActiveReportAction('email')
     setReportActionMessage('')
 
@@ -572,15 +608,19 @@ function PropertyChecklistPage() {
             removeSectionPhoto('additional-notes', attachmentId)
           }
           onUpdateAdditionalNotes={updateAdditionalNotes}
+          onUpdateOverallCondition={updateGeneral}
           onToggleCollapse={() => toggleSection('additional-notes')}
+          overallCondition={general.overallCondition}
           photoAttachments={sectionPhotos['additional-notes'] ?? []}
         />
 
         <SignOffSection
           activeReportAction={activeReportAction}
+          canGenerateReport={canGenerateReport}
           onDownloadReport={handleDownloadReport}
           onEmailReport={handleEmailReport}
           onUpdateSignOff={updateSignOff}
+          reportReadinessMessage={reportReadinessMessage}
           reportActionMessage={reportActionMessage}
           signOff={signOff}
         />

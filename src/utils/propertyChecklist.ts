@@ -27,10 +27,34 @@ export const makeFileName = (value: string) =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
 
+export const formatReportDate = (
+  value: string,
+  fallback = 'Not provided',
+) => {
+  const trimmedValue = value.trim()
+
+  if (!trimmedValue) {
+    return fallback
+  }
+
+  const parsedDate = new Date(`${trimmedValue}T00:00:00`)
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return trimmedValue
+  }
+
+  return parsedDate.toLocaleDateString('en-US', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  })
+}
+
 export const buildObservationLines = ({
   additionalNotes,
   checklist,
-}: Pick<ReportContext, 'additionalNotes' | 'checklist'>) => {
+  general,
+}: Pick<ReportContext, 'additionalNotes' | 'checklist' | 'general'>) => {
   const checklistNotes = checklistSections.flatMap((section) =>
     section.items.flatMap((item) =>
       checklist[item.id]?.note
@@ -59,6 +83,10 @@ export const buildObservationLines = ({
     narrativeNotes.push(
       `Inspector Comments: ${additionalNotes.inspectorComments}`,
     )
+  }
+
+  if (general.overallCondition) {
+    narrativeNotes.push(`Overall Condition: ${general.overallCondition}`)
   }
 
   return [...checklistNotes, ...narrativeNotes]

@@ -17,19 +17,23 @@ import {
 
 type SignOffSectionProps = {
   activeReportAction: 'download' | 'email' | null
+  canGenerateReport: boolean
   onDownloadReport: () => void
   onEmailReport: () => void
   onUpdateSignOff: UpdateSignOffField
   reportActionMessage: string
+  reportReadinessMessage: string
   signOff: SignOffState
 }
 
 function SignOffSection({
   activeReportAction,
+  canGenerateReport,
   onDownloadReport,
   onEmailReport,
   onUpdateSignOff,
   reportActionMessage,
+  reportReadinessMessage,
   signOff,
 }: SignOffSectionProps) {
   return (
@@ -86,7 +90,7 @@ function SignOffSection({
             <button
               type="button"
               className={buttonPrimaryClasses}
-              disabled={activeReportAction !== null}
+              disabled={activeReportAction !== null || !canGenerateReport}
               onClick={onDownloadReport}
             >
               {activeReportAction === 'download'
@@ -96,7 +100,7 @@ function SignOffSection({
             <button
               type="button"
               className={buttonSecondaryClasses}
-              disabled={activeReportAction !== null}
+              disabled={activeReportAction !== null || !canGenerateReport}
               onClick={onEmailReport}
             >
               {activeReportAction === 'email'
@@ -105,6 +109,12 @@ function SignOffSection({
             </button>
           </div>
         </div>
+
+        {!canGenerateReport ? (
+          <p className="text-sm leading-6 text-slate-500">
+            {reportReadinessMessage}
+          </p>
+        ) : null}
 
         {reportActionMessage ? (
           <p className="text-sm leading-6 text-slate-500">

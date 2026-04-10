@@ -7,7 +7,6 @@ import {
   fieldClasses,
   fieldLabelClasses,
   formGridClasses,
-  fullWidthFieldClasses,
   radioGroupClasses,
   radioOptionClasses,
   radioOptionCheckedClasses,
@@ -152,17 +151,6 @@ function GeneralInformationSection({
             </div>
           </fieldset>
 
-          <label className={`${fieldClasses} ${fullWidthFieldClasses}`}>
-            <span className={fieldLabelClasses}>Notes on Overall Condition</span>
-            <textarea
-              rows={4}
-              value={general.overallCondition}
-              onChange={(event) =>
-                onUpdateGeneral('overallCondition', event.target.value)
-              }
-              placeholder="Summarise the property condition, priorities, or risks observed during the visit."
-            />
-          </label>
         </div>
       ) : null}
     </section>

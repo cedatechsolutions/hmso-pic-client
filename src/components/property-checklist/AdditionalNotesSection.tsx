@@ -1,5 +1,6 @@
 import type {
   AdditionalNotesState,
+  UpdateGeneralField,
   PhotoAttachment,
   UpdateAdditionalNotesField,
 } from '../../types/propertyChecklist'
@@ -21,20 +22,24 @@ import {
 
 type AdditionalNotesSectionProps = {
   additionalNotes: AdditionalNotesState
+  overallCondition: string
   isCollapsed: boolean
   onPhotoChange: ChangeEventHandler<HTMLInputElement>
   onRemovePhoto: (attachmentId: string) => void
   onUpdateAdditionalNotes: UpdateAdditionalNotesField
+  onUpdateOverallCondition: UpdateGeneralField
   onToggleCollapse: () => void
   photoAttachments: PhotoAttachment[]
 }
 
 function AdditionalNotesSection({
   additionalNotes,
+  overallCondition,
   isCollapsed,
   onPhotoChange,
   onRemovePhoto,
   onUpdateAdditionalNotes,
+  onUpdateOverallCondition,
   onToggleCollapse,
   photoAttachments,
 }: AdditionalNotesSectionProps) {
@@ -129,6 +134,18 @@ function AdditionalNotesSection({
                   onUpdateAdditionalNotes('inspectorComments', event.target.value)
                 }
                 placeholder="Enter any additional comments"
+              />
+            </label>
+
+            <label className={`${fieldClasses} ${fullWidthFieldClasses}`}>
+              <span className={fieldLabelClasses}>Notes on Overall Condition</span>
+              <textarea
+                rows={4}
+                value={overallCondition}
+                onChange={(event) =>
+                  onUpdateOverallCondition('overallCondition', event.target.value)
+                }
+                placeholder="Summarise the property condition, priorities, or risks observed during the visit."
               />
             </label>
           </div>
