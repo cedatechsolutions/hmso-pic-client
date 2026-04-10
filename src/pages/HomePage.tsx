@@ -26,7 +26,7 @@ function HomePage() {
     <main className="min-h-screen bg-white">
       <section className="mx-auto grid min-h-screen w-[min(720px,calc(100%_-_24px))] place-items-center py-8 sm:w-[min(720px,calc(100%_-_40px))]">
         <div className="w-full max-w-[420px] grid gap-8">
-          <div className="grid gap-3 text-center">
+          <div className="grid gap-3 text-center px-4">
             <h1 className="text-[1.9rem] font-medium tracking-[-0.04em] text-slate-900 sm:text-[2.3rem]">
               Which form would you like to use?
             </h1>
