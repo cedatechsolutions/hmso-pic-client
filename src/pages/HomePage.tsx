@@ -23,7 +23,7 @@ const checklistOptions: ChecklistOption[] = [
 
 function HomePage() {
   return (
-    <main className="min-h-screen bg-white">
+    <main className="relative min-h-screen bg-white">
       <section className="mx-auto grid min-h-screen w-[min(720px,calc(100%_-_24px))] place-items-center py-8 sm:w-[min(720px,calc(100%_-_40px))]">
         <div className="w-full max-w-[420px] grid gap-8">
           <div className="grid gap-3 text-center px-4">
@@ -59,6 +59,32 @@ function HomePage() {
           </div>
         </div>
       </section>
+
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="site-unavailable-title"
+        aria-describedby="site-unavailable-description"
+        className="fixed inset-0 z-50 grid place-items-center bg-white px-6"
+      >
+        <div className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white px-8 py-12 text-center shadow-[0_24px_60px_rgba(15,23,42,0.08)]">
+          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">
+            Notice
+          </p>
+          <h2
+            id="site-unavailable-title"
+            className="mt-4 text-3xl font-semibold tracking-[-0.04em] text-slate-900 sm:text-4xl"
+          >
+            This site is currently unavailable
+          </h2>
+          <p
+            id="site-unavailable-description"
+            className="mt-4 text-base leading-7 text-slate-600 sm:text-lg"
+          >
+            Please contact the developer for assistance before trying to access this page again.
+          </p>
+        </div>
+      </div>
     </main>
   )
 }
