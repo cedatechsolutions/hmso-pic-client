@@ -70,6 +70,10 @@ const createSectionPhotosState = () =>
     return state
   }, {})
 
+const siteUnavailableTitle = 'This site is currently unavailable'
+const siteUnavailableDescription =
+  'Please contact the developer for assistance before trying to access this page again.'
+
 function PropertyChecklistPage() {
   const [general, setGeneral] = useState<GeneralFormState>({
     propertyAddress: '',
@@ -148,12 +152,17 @@ function PropertyChecklistPage() {
     isChecklistComplete &&
     areRequiredGeneralFieldsComplete &&
     areRequiredSignOffFieldsComplete
+  const areReportActionsTemporarilyUnavailable = true
 
   const reportReadinessMessage = !isChecklistComplete
     ? 'Complete all checklist items before downloading or emailing the report.'
     : !areRequiredGeneralFieldsComplete || !areRequiredSignOffFieldsComplete
       ? 'Fill in all required fields before downloading or emailing the report.'
       : 'The checklist is complete and the report actions are ready.'
+
+  const showUnavailableReportNotice = () => {
+    window.alert(`${siteUnavailableTitle}\n\n${siteUnavailableDescription}`)
+  }
 
   const updateGeneral = <K extends keyof GeneralFormState>(
     field: K,
@@ -616,40 +625,19 @@ function PropertyChecklistPage() {
 
         <SignOffSection
           activeReportAction={activeReportAction}
+          areReportActionsTemporarilyUnavailable={
+            areReportActionsTemporarilyUnavailable
+          }
           canGenerateReport={canGenerateReport}
           onDownloadReport={handleDownloadReport}
           onEmailReport={handleEmailReport}
+          onUnavailableReportAction={showUnavailableReportNotice}
           onUpdateSignOff={updateSignOff}
           reportReadinessMessage={reportReadinessMessage}
           reportActionMessage={reportActionMessage}
           signOff={signOff}
         />
       </form>
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="site-unavailable-title"
-        aria-describedby="site-unavailable-description"
-        className="fixed inset-0 z-50 grid place-items-center bg-white px-6"
-      >
-        <div className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white px-8 py-12 text-center shadow-[0_24px_60px_rgba(15,23,42,0.08)]">
-          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">
-            Notice
-          </p>
-          <h2
-            id="site-unavailable-title"
-            className="mt-4 text-3xl font-semibold tracking-[-0.04em] text-slate-900 sm:text-4xl"
-          >
-            This site is currently unavailable
-          </h2>
-          <p
-            id="site-unavailable-description"
-            className="mt-4 text-base leading-7 text-slate-600 sm:text-lg"
-          >
-            Please contact the developer for assistance before trying to access this page again.
-          </p>
-        </div>
-      </div>
     </main>
   )
 }

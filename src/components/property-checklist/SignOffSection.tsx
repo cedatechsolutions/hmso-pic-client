@@ -17,9 +17,11 @@ import {
 
 type SignOffSectionProps = {
   activeReportAction: 'download' | 'email' | null
+  areReportActionsTemporarilyUnavailable: boolean
   canGenerateReport: boolean
   onDownloadReport: () => void
   onEmailReport: () => void
+  onUnavailableReportAction: () => void
   onUpdateSignOff: UpdateSignOffField
   reportActionMessage: string
   reportReadinessMessage: string
@@ -28,14 +30,49 @@ type SignOffSectionProps = {
 
 function SignOffSection({
   activeReportAction,
+  areReportActionsTemporarilyUnavailable,
   canGenerateReport,
   onDownloadReport,
   onEmailReport,
+  onUnavailableReportAction,
   onUpdateSignOff,
   reportActionMessage,
   reportReadinessMessage,
   signOff,
 }: SignOffSectionProps) {
+  const areReportActionsDisabled =
+    activeReportAction !== null ||
+    !canGenerateReport ||
+    areReportActionsTemporarilyUnavailable
+  const disabledButtonClasses =
+    'cursor-not-allowed opacity-60 hover:translate-y-0 hover:shadow-none'
+
+  const handleDownloadClick = () => {
+    if (activeReportAction !== null) {
+      return
+    }
+
+    if (areReportActionsTemporarilyUnavailable) {
+      onUnavailableReportAction()
+      return
+    }
+
+    onDownloadReport()
+  }
+
+  const handleEmailClick = () => {
+    if (activeReportAction !== null) {
+      return
+    }
+
+    if (areReportActionsTemporarilyUnavailable) {
+      onUnavailableReportAction()
+      return
+    }
+
+    onEmailReport()
+  }
+
   return (
     <section className={sectionShellClasses} id="sign-off">
       <div className={sectionHeadingClasses}>
@@ -43,13 +80,13 @@ function SignOffSection({
           <span className={sectionKickerClasses}>Section 11</span>
           <h2 className={sectionTitleClasses}>Sign Off</h2>
           <p className={sectionDescriptionClasses}>
-            Finalise the inspection so the report is ready to download or send
-            by email.
+            Finalise the inspection so the report details are complete when
+            downloads are re-enabled.
           </p>
         </div>
       </div>
 
-      <div className='flex flex-col gap-4'>
+      <div className="flex flex-col gap-4">
         <div className={compactFormGridClasses}>
           <label className={fieldClasses}>
             <span className={fieldLabelClasses}>
@@ -89,9 +126,11 @@ function SignOffSection({
           <div className={actionButtonsClasses}>
             <button
               type="button"
-              className={buttonPrimaryClasses}
-              disabled={activeReportAction !== null || !canGenerateReport}
-              onClick={onDownloadReport}
+              aria-disabled={areReportActionsDisabled}
+              className={`${buttonPrimaryClasses} ${
+                areReportActionsDisabled ? disabledButtonClasses : ''
+              }`}
+              onClick={handleDownloadClick}
             >
               {activeReportAction === 'download'
                 ? 'Preparing PDF...'
@@ -99,9 +138,11 @@ function SignOffSection({
             </button>
             <button
               type="button"
-              className={buttonSecondaryClasses}
-              disabled={activeReportAction !== null || !canGenerateReport}
-              onClick={onEmailReport}
+              aria-disabled={areReportActionsDisabled}
+              className={`${buttonSecondaryClasses} ${
+                areReportActionsDisabled ? disabledButtonClasses : ''
+              }`}
+              onClick={handleEmailClick}
             >
               {activeReportAction === 'email'
                 ? 'Preparing Email...'
@@ -109,6 +150,12 @@ function SignOffSection({
             </button>
           </div>
         </div>
+
+        {areReportActionsTemporarilyUnavailable ? (
+          <p className="text-sm leading-6 text-slate-500">
+            Report actions are temporarily unavailable.
+          </p>
+        ) : null}
 
         {!canGenerateReport ? (
           <p className="text-sm leading-6 text-slate-500">
@@ -122,8 +169,6 @@ function SignOffSection({
           </p>
         ) : null}
       </div>
-
-      
     </section>
   )
 }
